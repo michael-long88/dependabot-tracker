@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use reqwest::blocking::Client;
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, USER_AGENT};
 use serde::{Deserialize, Serialize};
@@ -68,7 +70,8 @@ pub fn fetch_github_repos(
 
     let updated_repos = fetch_dependabot_alerts(token, username, &repos)?;
 
-    let file = std::fs::File::create("data/repositories.json").unwrap();
+    let file_location = PathBuf::from(".").join("data").join("repositories.json");
+    let file = std::fs::File::create(file_location).unwrap();
     let writer = std::io::BufWriter::new(file);
     serde_json::to_writer(writer, &updated_repos).unwrap();
 

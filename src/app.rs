@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::path::PathBuf;
 use std::sync::mpsc::Receiver;
 
 use color_eyre::eyre::Result;
@@ -65,7 +66,8 @@ impl App {
 }
 
 pub fn load_repositories_from_file() -> Result<Vec<Repository>, Box<dyn Error>> {
-    let file = std::fs::File::open("data/repositories.json")?;
+    let file_location = PathBuf::from(".").join("data").join("repositories.json");
+    let file = std::fs::File::open(file_location)?;
     let reader = std::io::BufReader::new(file);
     let repositories = serde_json::from_reader(reader)?;
 
