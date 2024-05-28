@@ -21,10 +21,7 @@ pub fn initialize_logging() -> Result<()> {
     std::fs::create_dir_all(directory.clone())?;
     let log_path = directory.join(LOG_FILE.clone());
     let log_file = std::fs::File::create(log_path)?;
-    std::env::set_var(
-        "RUST_LOG",
-        format!("{}=info", env!("CARGO_CRATE_NAME")),
-    );
+    std::env::set_var("RUST_LOG", format!("{}=info", env!("CARGO_CRATE_NAME")));
     let file_subscriber = tracing_subscriber::fmt::layer()
         .with_file(true)
         .with_line_number(true)
@@ -32,7 +29,10 @@ pub fn initialize_logging() -> Result<()> {
         .with_target(false)
         .with_ansi(false)
         .with_filter(tracing_subscriber::filter::EnvFilter::from_default_env());
-    tracing_subscriber::registry().with(file_subscriber).with(ErrorLayer::default()).init();
+    tracing_subscriber::registry()
+        .with(file_subscriber)
+        .with(ErrorLayer::default())
+        .init();
     Ok(())
 }
 

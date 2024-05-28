@@ -1,28 +1,41 @@
-use std::{error::Error, io, panic::{set_hook, take_hook}, sync::mpsc::{self, TryRecvError}, thread};
+use std::{
+    error::Error,
+    io,
+    panic::{set_hook, take_hook},
+    sync::mpsc::{self, TryRecvError},
+    thread,
+};
 
 use color_eyre::eyre::Result;
-use crossterm::{event::{self, Event, KeyCode}, execute, terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen}};
+use crossterm::{
+    event::{self, Event, KeyCode},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
 use dotenv::dotenv;
-use ratatui::{backend::{Backend, CrosstermBackend},Terminal};
+use ratatui::{
+    backend::{Backend, CrosstermBackend},
+    Terminal,
+};
 use repository_list::RepositoryList;
 
 mod app;
-mod repository_list;
-mod ui;
-mod logging;
 mod current_screen;
 mod dependabot;
+mod logging;
 mod repository;
-use crate::app::{App, DependabotTrackerError, DependabotScrollbar};
-use crate::repository::fetch_github_repos;
+mod repository_list;
+mod ui;
+use crate::app::{App, DependabotScrollbar, DependabotTrackerError};
 use crate::current_screen::CurrentScreen;
 use crate::logging::initialize_logging;
+use crate::repository::fetch_github_repos;
 
 fn main() -> Result<(), Box<dyn Error>> {
     dotenv().ok();
     initialize_logging()?;
     init_panic_hook();
-    
+
     let mut tui = init_tui()?;
     let mut app = App::new();
     let res = run_app(&mut tui, &mut app);
@@ -50,28 +63,28 @@ pub fn init_tui() -> io::Result<Terminal<impl Backend>> {
     execute!(stdout, EnterAlternateScreen)?;
 
     let backend = CrosstermBackend::new(stdout);
-    
+
     Terminal::new(backend)
 }
 
 pub fn restore_tui() -> io::Result<()> {
     disable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(
-        stdout,
-        LeaveAlternateScreen,
-    )?;
+    execute!(stdout, LeaveAlternateScreen,)?;
 
     Ok(())
 }
 
-fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<(), DependabotTrackerError> {
+fn run_app<B: Backend>(
+    terminal: &mut Terminal<B>,
+    app: &mut App,
+) -> Result<(), DependabotTrackerError> {
     loop {
-        terminal.draw(|f| ui::ui(f, app))
-        .map_err(|e| Box::new(e) as DependabotTrackerError)?;
+        terminal
+            .draw(|f| ui::ui(f, app))
+            .map_err(|e| Box::new(e) as DependabotTrackerError)?;
 
-        if let Event::Key(key) = event::read()
-        .map_err(|e| Box::new(e) as DependabotTrackerError)? {
+        if let Event::Key(key) = event::read().map_err(|e| Box::new(e) as DependabotTrackerError)? {
             if key.kind == event::KeyEventKind::Release {
                 // Skip events that are not KeyEventKind::Press
                 continue;
@@ -97,13 +110,13 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<(), 
                         let token = app.token.clone();
 
                         thread::spawn(move || {
-                            let result: Result<RepositoryList, DependabotTrackerError> = fetch_github_repos(&username, &token);
+                            let result: Result<RepositoryList, DependabotTrackerError> =
+                                fetch_github_repos(&username, &token);
                             tx.send(result).unwrap();
                         });
 
                         app.current_screen = CurrentScreen::Updating;
                         app.fetching = Some(rx);
-                        
                     }
                     KeyCode::Char('n') => {
                         app.current_screen = CurrentScreen::ProjectList;
@@ -125,7 +138,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<(), 
                     }
                     KeyCode::Up => {
                         app.repositories.previous();
-                    },
+                    }
                     KeyCode::Down => {
                         app.repositories.next();
                     }
@@ -187,16 +200,19 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<(), 
                 Err(TryRecvError::Empty) => {
                     // The fetch is still in progress, update the UI as usual
                     app.on_tick();
-                    terminal.draw(|f| ui::ui(f, app))
+                    terminal
+                        .draw(|f| ui::ui(f, app))
                         .map_err(|e| Box::new(e) as DependabotTrackerError)?;
                 }
                 Err(TryRecvError::Disconnected) => {
                     // The fetch thread has panicked or been unexpectedly terminated
-                    return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Fetch thread terminated unexpectedly")));
+                    return Err(Box::new(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "Fetch thread terminated unexpectedly",
+                    )));
                 }
             }
             std::thread::sleep(std::time::Duration::from_millis(200));
         }
     }
 }
-

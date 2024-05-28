@@ -1,6 +1,9 @@
 use std::fmt::{self, Display, Formatter};
 
-use ratatui::{style::{Color, Style}, text::{Line, Span}};
+use ratatui::{
+    style::{Color, Style},
+    text::{Line, Span},
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -72,36 +75,51 @@ pub struct Dependabot {
 impl Dependabot {
     pub fn to_text(&self) -> Vec<Line> {
         let mut lines = Vec::<Line>::new();
-        lines.push(Line::from(vec![
-            Span::styled("-".repeat(20), Style::default().fg(Color::Green))
-        ]));
-        lines.push(Line::from(vec![
-            Span::styled(format!("Number: {}", self.number), Style::default().fg(Color::Blue))
-        ]));
-        lines.push(Line::from(vec![
-            Span::styled(format!("State: {}", self.state), Style::default().fg(Color::Blue))
-        ]));
-        lines.push(Line::from(vec![
-            Span::styled(format!("Severity: {}", self.severity), Style::default().fg(Color::Blue))
-        ]));
-        lines.push(Line::from(vec![
-            Span::styled(format!("URL: {}", self.html_url), Style::default().fg(Color::Blue))
-        ]));
-        lines.push(Line::from(vec![
-            Span::styled(format!("Created At: {}", self.created_at), Style::default().fg(Color::Blue))
-        ]));
-        lines.push(Line::from(vec![
-            Span::styled(format!("Updated At: {}", self.updated_at), Style::default().fg(Color::Blue))
-        ]));
-        lines.push(Line::from(vec![
-            Span::styled(format!("Dismissed At: {}", self.dismissed_at.clone().unwrap_or_else(|| "N/A".to_string())), Style::default().fg(Color::Blue))
-        ]));
-        lines.push(Line::from(vec![
-            Span::styled(format!("Dependency Ecosystem: {}", self.dependency_ecosystem), Style::default().fg(Color::Blue))
-        ]));
-        lines.push(Line::from(vec![
-            Span::styled(format!("Dependency Name: {}", self.dependency_name), Style::default().fg(Color::Blue))
-        ]));
+        lines.push(Line::from(vec![Span::styled(
+            "-".repeat(20),
+            Style::default().fg(Color::Green),
+        )]));
+        lines.push(Line::from(vec![Span::styled(
+            format!("Number: {}", self.number),
+            Style::default().fg(Color::Blue),
+        )]));
+        lines.push(Line::from(vec![Span::styled(
+            format!("State: {}", self.state),
+            Style::default().fg(Color::Blue),
+        )]));
+        lines.push(Line::from(vec![Span::styled(
+            format!("Severity: {}", self.severity),
+            Style::default().fg(Color::Blue),
+        )]));
+        lines.push(Line::from(vec![Span::styled(
+            format!("URL: {}", self.html_url),
+            Style::default().fg(Color::Blue),
+        )]));
+        lines.push(Line::from(vec![Span::styled(
+            format!("Created At: {}", self.created_at),
+            Style::default().fg(Color::Blue),
+        )]));
+        lines.push(Line::from(vec![Span::styled(
+            format!("Updated At: {}", self.updated_at),
+            Style::default().fg(Color::Blue),
+        )]));
+        lines.push(Line::from(vec![Span::styled(
+            format!(
+                "Dismissed At: {}",
+                self.dismissed_at
+                    .clone()
+                    .unwrap_or_else(|| "N/A".to_string())
+            ),
+            Style::default().fg(Color::Blue),
+        )]));
+        lines.push(Line::from(vec![Span::styled(
+            format!("Dependency Ecosystem: {}", self.dependency_ecosystem),
+            Style::default().fg(Color::Blue),
+        )]));
+        lines.push(Line::from(vec![Span::styled(
+            format!("Dependency Name: {}", self.dependency_name),
+            Style::default().fg(Color::Blue),
+        )]));
 
         lines
     }

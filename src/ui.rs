@@ -7,7 +7,7 @@ use ratatui::{
 };
 
 use crate::app::App;
-use crate::current_screen::{render_screen, render_popup, get_key_hint_text, get_navigation_text};
+use crate::current_screen::{get_key_hint_text, get_navigation_text, render_popup, render_screen};
 
 pub fn ui(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
@@ -35,7 +35,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
 
     let current_navigation_text = vec![
         // The first half of the text
-        get_navigation_text(app)
+        get_navigation_text(app),
     ];
 
     let mode_footer = Paragraph::new(Line::from(current_navigation_text))
@@ -44,10 +44,9 @@ pub fn ui(f: &mut Frame, app: &mut App) {
 
     let current_keys_hint = get_key_hint_text(app);
 
-    let key_notes_footer =
-        Paragraph::new(Line::from(current_keys_hint))
-            .block(Block::default().borders(Borders::ALL))
-            .wrap(Wrap { trim: true });
+    let key_notes_footer = Paragraph::new(Line::from(current_keys_hint))
+        .block(Block::default().borders(Borders::ALL))
+        .wrap(Wrap { trim: true });
 
     let footer_chunks = Layout::default()
         .direction(Direction::Horizontal)

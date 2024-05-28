@@ -1,10 +1,10 @@
-use serde::{Deserialize, Serialize};
-use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, USER_AGENT};
 use reqwest::blocking::Client;
+use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, USER_AGENT};
+use serde::{Deserialize, Serialize};
 
+use crate::app::DependabotTrackerError;
 use crate::dependabot::{Dependabot, DependabotSeverity, DependabotState, GithubDependabot};
 use crate::repository_list::RepositoryList;
-use crate::app::DependabotTrackerError;
 use crate::trace_dbg;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,21 +33,37 @@ pub struct Repository {
     pub total_active_alerts: usize,
 }
 
-pub fn fetch_github_repos(username: &str, token: &str) -> Result<RepositoryList, DependabotTrackerError> {
+pub fn fetch_github_repos(
+    username: &str,
+    token: &str,
+) -> Result<RepositoryList, DependabotTrackerError> {
     let url = "https://api.github.com/user/repos?affiliation=owner&per_page=100";
 
     let mut headers = HeaderMap::new();
-    headers.insert(ACCEPT, HeaderValue::from_static("application/vnd.github+json"));
-    headers.insert(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", token))
-        .map_err(|e| Box::new(e) as DependabotTrackerError)?);
+    headers.insert(
+        ACCEPT,
+        HeaderValue::from_static("application/vnd.github+json"),
+    );
+    headers.insert(
+        AUTHORIZATION,
+        HeaderValue::from_str(&format!("Bearer {}", token))
+            .map_err(|e| Box::new(e) as DependabotTrackerError)?,
+    );
     headers.insert(USER_AGENT, HeaderValue::from_static("reqwest"));
-    headers.insert("X-GitHub-Api-Version", HeaderValue::from_static("2022-11-28"));
+    headers.insert(
+        "X-GitHub-Api-Version",
+        HeaderValue::from_static("2022-11-28"),
+    );
 
     let client = reqwest::blocking::Client::new();
-    let response = client.get(url).headers(headers).send()
+    let response = client
+        .get(url)
+        .headers(headers)
+        .send()
         .map_err(|e| Box::new(e) as DependabotTrackerError)?;
 
-    let repos: Vec<GitHubRepository> = response.json()
+    let repos: Vec<GitHubRepository> = response
+        .json()
         .map_err(|e| Box::new(e) as DependabotTrackerError)?;
 
     let updated_repos = fetch_dependabot_alerts(token, username, &repos)?;
@@ -59,34 +75,60 @@ pub fn fetch_github_repos(username: &str, token: &str) -> Result<RepositoryList,
     Ok(RepositoryList::with_respositories(updated_repos))
 }
 
-fn fetch_dependabot_alerts(token: &str, username: &str, repositories: &[GitHubRepository]) -> Result<Vec<Repository>, DependabotTrackerError> {
+fn fetch_dependabot_alerts(
+    token: &str,
+    username: &str,
+    repositories: &[GitHubRepository],
+) -> Result<Vec<Repository>, DependabotTrackerError> {
     let client = reqwest::blocking::Client::new();
 
-    let updated_repos: Vec<Repository> = repositories.iter().map(|repo| {
-        fetch_repo_depenabot_alerts(token, username, repo, &client)
-    })
+    let updated_repos: Vec<Repository> = repositories
+        .iter()
+        .map(|repo| fetch_repo_depenabot_alerts(token, username, repo, &client))
         .filter_map(|result| result.ok())
         .collect();
 
     Ok(updated_repos)
 }
 
-fn fetch_repo_depenabot_alerts(token: &str, username: &str, repository: &GitHubRepository, client: &Client) -> Result<Repository, DependabotTrackerError> {
-    let fetch_repo_dependabot_alert_trace = format!("fetching dependabot alerts for {}", repository.name);
+fn fetch_repo_depenabot_alerts(
+    token: &str,
+    username: &str,
+    repository: &GitHubRepository,
+    client: &Client,
+) -> Result<Repository, DependabotTrackerError> {
+    let fetch_repo_dependabot_alert_trace =
+        format!("fetching dependabot alerts for {}", repository.name);
     trace_dbg!(level: tracing::Level::INFO, fetch_repo_dependabot_alert_trace);
-    
-    let url = format!("https://api.github.com/repos/{}/{}/dependabot/alerts?per_page=100", username, repository.name);
+
+    let url = format!(
+        "https://api.github.com/repos/{}/{}/dependabot/alerts?per_page=100",
+        username, repository.name
+    );
     let mut headers = HeaderMap::new();
-    headers.insert(ACCEPT, HeaderValue::from_static("application/vnd.github+json"));
-    headers.insert(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", token)).unwrap());
+    headers.insert(
+        ACCEPT,
+        HeaderValue::from_static("application/vnd.github+json"),
+    );
+    headers.insert(
+        AUTHORIZATION,
+        HeaderValue::from_str(&format!("Bearer {}", token)).unwrap(),
+    );
     headers.insert(USER_AGENT, HeaderValue::from_static("reqwest"));
-    headers.insert("X-GitHub-Api-Version", HeaderValue::from_static("2022-11-28"));
-    
-    let response = client.get(url).headers(headers).send()
+    headers.insert(
+        "X-GitHub-Api-Version",
+        HeaderValue::from_static("2022-11-28"),
+    );
+
+    let response = client
+        .get(url)
+        .headers(headers)
+        .send()
         .map_err(|e| Box::new(e) as DependabotTrackerError)?;
 
     if response.status().is_client_error() {
-        let repo_dependabot_not_enabled = format!("Dependabot alerts not enable for {}", repository.name);
+        let repo_dependabot_not_enabled =
+            format!("Dependabot alerts not enable for {}", repository.name);
         trace_dbg!(level: tracing::Level::WARN, repo_dependabot_not_enabled);
 
         return Ok(Repository {
@@ -104,12 +146,14 @@ fn fetch_repo_depenabot_alerts(token: &str, username: &str, repository: &GitHubR
             total_active_alerts: 0,
         });
     }
-    
-    let github_dependabots: Vec<GithubDependabot> = response.json()
+
+    let github_dependabots: Vec<GithubDependabot> = response
+        .json()
         .map_err(|e| Box::new(e) as DependabotTrackerError)?;
 
-    let dependabots: Vec<Dependabot> = github_dependabots.into_iter().map(|github_dependabot| {
-        Dependabot {
+    let dependabots: Vec<Dependabot> = github_dependabots
+        .into_iter()
+        .map(|github_dependabot| Dependabot {
             number: github_dependabot.number,
             state: github_dependabot.state,
             severity: github_dependabot.security_vulnerability.severity,
@@ -119,16 +163,39 @@ fn fetch_repo_depenabot_alerts(token: &str, username: &str, repository: &GitHubR
             dismissed_at: github_dependabot.dismissed_at,
             dependency_ecosystem: github_dependabot.security_vulnerability.package.ecosystem,
             dependency_name: github_dependabot.security_vulnerability.package.name,
-        }
-    })
+        })
         .collect();
 
-        let low_alerts = dependabots.iter().filter(|dependabot| dependabot.state == DependabotState::Open && dependabot.severity == DependabotSeverity::Low).count();
-        let medium_alerts = dependabots.iter().filter(|dependabot| dependabot.state == DependabotState::Open && dependabot.severity == DependabotSeverity::Medium).count();
-        let high_alerts = dependabots.iter().filter(|dependabot| dependabot.state == DependabotState::Open && dependabot.severity == DependabotSeverity::High).count();
-        let critical_alerts = dependabots.iter().filter(|dependabot| dependabot.state == DependabotState::Open && dependabot.severity == DependabotSeverity::Critical).count();
-        let total_active_alerts = low_alerts + medium_alerts + high_alerts + critical_alerts;
-    
+    let low_alerts = dependabots
+        .iter()
+        .filter(|dependabot| {
+            dependabot.state == DependabotState::Open
+                && dependabot.severity == DependabotSeverity::Low
+        })
+        .count();
+    let medium_alerts = dependabots
+        .iter()
+        .filter(|dependabot| {
+            dependabot.state == DependabotState::Open
+                && dependabot.severity == DependabotSeverity::Medium
+        })
+        .count();
+    let high_alerts = dependabots
+        .iter()
+        .filter(|dependabot| {
+            dependabot.state == DependabotState::Open
+                && dependabot.severity == DependabotSeverity::High
+        })
+        .count();
+    let critical_alerts = dependabots
+        .iter()
+        .filter(|dependabot| {
+            dependabot.state == DependabotState::Open
+                && dependabot.severity == DependabotSeverity::Critical
+        })
+        .count();
+    let total_active_alerts = low_alerts + medium_alerts + high_alerts + critical_alerts;
+
     Ok(Repository {
         id: repository.id,
         name: repository.name.clone(),
