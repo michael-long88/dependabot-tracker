@@ -47,14 +47,8 @@ pub fn fetch_github_repos(username: &str, token: &str) -> Result<RepositoryList,
     let response = client.get(url).headers(headers).send()
         .map_err(|e| Box::new(e) as DependabotTrackerError)?;
 
-    let mut repos: Vec<GitHubRepository> = response.json()
+    let repos: Vec<GitHubRepository> = response.json()
         .map_err(|e| Box::new(e) as DependabotTrackerError)?;
-    // TODO: remove this after everything is finalized
-    // this is just filtering certain repos out for the demo
-    let repos_to_drop = ["tennessee-stone", "tennesee-stone", "tennessee_stone", "sunday-school", "asheville"];
-    repos.retain(|r| {
-        !repos_to_drop.iter().any(|&repo_to_drop| r.name.starts_with(repo_to_drop))
-    });
 
     let updated_repos = fetch_dependabot_alerts(token, username, &repos)?;
 

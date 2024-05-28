@@ -7,7 +7,7 @@ Note: You must create a [PAT](https://docs.github.com/en/authentication/keeping-
 - `Dependabot alerts: read-only`
 
 ## Running
-To run the application, you must have Rust installed. You can install Rust by following the instructions at [rustup.rs](https://rustup.rs/). Once Rust is installed, just run `cargo run` in the root of the repository. You can rename `data/_repositories.json` to `data/repositories.json` if you want to see example repositories.
+To run the application, you must have Rust installed. You can install Rust by following the instructions at [rustup.rs](https://rustup.rs/). Once Rust is installed, just run `cargo run` in the root of the repository. You can rename `data/example_repositories.json` to `data/repositories.json` if you want to see example repositories.
 
 ## Environment Variables
 There are three environment variables that must be set:

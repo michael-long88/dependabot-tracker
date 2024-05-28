@@ -22,6 +22,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     dotenv().ok();
     initialize_logging()?;
     init_panic_hook();
+    
     let mut tui = init_tui()?;
     let mut app = App::new();
     let res = run_app(&mut tui, &mut app);
